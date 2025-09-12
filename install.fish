@@ -174,7 +174,9 @@ if test -f $mkinit_file
             sudo sed -i "s|$hooks|$new_hooks|" $mkinit_file
 
             # Regenerate initramfs only if presets exist
-            if test (count (ls /etc/mkinitcpio.d/*.preset 2>/dev/null)) -gt 0
+            set presets /etc/mkinitcpio.d/*.preset
+
+            if test -e $presets[1]
                 log 'Regenerating initramfs...'
                 sudo mkinitcpio -P
             else
