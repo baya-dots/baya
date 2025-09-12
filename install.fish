@@ -155,10 +155,15 @@ end
 # Plymouth themes
 set plymouth_theme_src (realpath plymouth-themes)
 if test -d $plymouth_theme_src
-    if confirm-overwrite /usr/share/plymouth/themes/mikuboot true
-        log 'Copying Plymouth theme - mikuboot...'
-        sudo mkdir -p /usr/share/plymouth/themes/mikuboot
-        sudo cp -r $plymouth_theme_src/mikuboot /usr/share/plymouth/themes/mikuboot
+    for theme_dir in $plymouth_theme_src/*/
+        set theme_name (basename $theme_dir)
+        set target_path /usr/share/plymouth/themes/$theme_name
+
+        if confirm-overwrite $target_path true
+            log "Copying Plymouth theme - $theme_name..."
+            sudo mkdir -p $target_path
+            sudo cp -r $plymouth_theme_src/$theme_name/* $target_path/
+        end
     end
 end
 
@@ -173,15 +178,8 @@ if test -f $mkinit_file
             set new_hooks (string replace -r 'HOOKS=\((.*)filesystems(.*)\)' 'HOOKS=(\1plymouth filesystems\2)' $hooks)
             sudo sed -i "s|$hooks|$new_hooks|" $mkinit_file
 
-            # Regenerate initramfs only if presets exist
-            set presets /etc/mkinitcpio.d/*.preset
-
-            if test -e $presets[1]
-                log 'Regenerating initramfs...'
-                sudo mkinitcpio -P
-            else
-                log 'No mkinitcpio presets found. Skipping initramfs regeneration.'
-            end
+            # Regenerate initramfs
+            sudo mkinitcpio -P
         else
             log 'Plymouth hook already in mkinitcpio.conf. Skipping...'
         end
