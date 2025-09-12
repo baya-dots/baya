@@ -311,7 +311,7 @@ end
 
 # Plymouth Section
 
-# Optional: copy your custom theme
+# custom theme
 set plymouth_theme_src (realpath plymouth-themes)
 if test -d $plymouth_theme_src
     if confirm-overwrite /usr/share/plymouth/themes/mikuboot
@@ -348,15 +348,17 @@ end
 
 # Ensure splash is in kernel parameters (idempotent)
 set loader_file /boot/loader/entries/arch.conf
+
 if test -f $loader_file
+    log 'Ensuring splash is in kernel parameters...'
     set options_line (grep '^options' $loader_file)
     if not string match -q '*splash*' $options_line
         log 'Adding splash to kernel parameters...'
-        sudo cp $loader_file $loader_file.bak
         sudo sed -i "s|^\(options.*\)|\1 splash|" $loader_file
     else
         log 'Splash already present in kernel parameters. Skipping...'
     end
 end
+
 
 log 'Baya Dots Finished Installing!'
