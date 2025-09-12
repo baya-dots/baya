@@ -35,13 +35,19 @@ function input -a text
     _out blue $text $argv[2..]
 end
 
-function confirm-overwrite -a path
+function confirm-overwrite -a path use_sudo
     if test -e $path -o -L $path
         # No prompt if noconfirm
         if set -q noconfirm
             input "$path already exists. Overwrite? [Y/n]"
-            log 'Removing...'
-            rm -rf $path
+
+            if test "$use_sudo"
+                log 'Removing (SUDO)...'
+                sudo rm -rf $path
+            else
+                log 'Removing...'
+                rm -rf $path
+            end
         else
             # Prompt user
             read -l -p "input '$path already exists. Overwrite? [Y/n] ' -n" confirm || exit 1
@@ -50,8 +56,13 @@ function confirm-overwrite -a path
                 log 'Skipping...'
                 return 1
             else
-                log 'Removing...'
-                rm -rf $path
+                if test "$use_sudo"
+                    log 'Removing (SUDO)...'
+                    sudo rm -rf $path
+                else
+                    log 'Removing...'
+                    rm -rf $path
+                end
             end
         end
     end
@@ -141,14 +152,13 @@ if confirm-overwrite $config/hypr
     hyprctl reload
 end
 
-# Plymouth Section
-# custom theme
+# Plymouth themes
 set plymouth_theme_src (realpath plymouth-themes)
 if test -d $plymouth_theme_src
-    if confirm-overwrite /usr/share/plymouth/themes/mikuboot
+    if confirm-overwrite /usr/share/plymouth/themes/mikuboot true
         log 'Copying Plymouth theme - mikuboot...'
         sudo mkdir -p /usr/share/plymouth/themes/mikuboot
-        sudo cp -r $plymouth_theme_src/mikuboot /usr/share/plymouth/themes/mikubobayaot
+        sudo cp -r $plymouth_theme_src/mikuboot /usr/share/plymouth/themes/mikuboot
     end
 end
 
