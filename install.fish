@@ -3,7 +3,7 @@
 argparse -n 'install.fish' -X 0 \
     'h/help' \
     'noconfirm' \
-    -- $argv
+    -- $args
 or exit
 
 # Print help
