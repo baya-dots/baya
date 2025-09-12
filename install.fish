@@ -165,7 +165,7 @@ end
 # Update mkinitcpio hooks for plymouth
 set mkinit_file /etc/mkinitcpio.conf
 if test -f $mkinit_file
-    set hooks (string match -r '^\s*HOOKS=.*' $mkinit_file)
+    set hooks (grep -E '^\s*HOOKS=' /etc/mkinitcpio.conf)
 
     if test -n "$hooks"
         if not contains 'plymouth' $hooks
