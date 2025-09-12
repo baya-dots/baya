@@ -4,6 +4,7 @@ argparse -n 'install.fish' -X 0 \
     'h/help' \
     'noconfirm' \
     'paru' \
+    'plymouth=' \
     -- $argv
 or exit
 
@@ -15,6 +16,7 @@ if set -q _flag_h
     echo '  -h, --help                  show this help message and exit'
     echo '  --noconfirm                 do not confirm package installation'
     echo '  --paru                      uses the aur helper paru instead of default yay'
+    echo '  --plymouth=mikuboot       uses the specified plymouth theme (default: mikuboot)'
 
     exit
 end
@@ -73,8 +75,15 @@ end
 # Variables
 set -q _flag_noconfirm && set noconfirm '--noconfirm'
 set -q _flag_paru && set -l aur_helper paru || set -l aur_helper yay
+set -q _flag_plymouth && set -l plymouth_theme $_flag_plymouth || set -l plymouth_theme mikuboot
+
 set -q XDG_CONFIG_HOME && set -l config $XDG_CONFIG_HOME || set -l config $HOME/.config
 set -q XDG_STATE_HOME && set -l state $XDG_STATE_HOME || set -l state $HOME/.local/state
+
+# Checks
+if ! test -d (realpath plymouth-themes/$plymouth_theme ^/dev/null)
+    set plymouth_theme mikuboot
+end
 
 # Startup prompt
 set_color cyan
@@ -202,4 +211,8 @@ if test -f $loader_file
     end
 end
 
+# Set Plymouth Theme
+sudo plymouth-set-default-theme $plymouth_theme
+
+# Final message
 log 'Baya Dots Finished Installing!'
