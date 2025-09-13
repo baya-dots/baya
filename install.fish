@@ -81,7 +81,7 @@ set -q XDG_CONFIG_HOME && set -l config $XDG_CONFIG_HOME || set -l config $HOME/
 set -q XDG_STATE_HOME && set -l state $XDG_STATE_HOME || set -l state $HOME/.local/state
 
 # Checks
-if ! test -d (realpath plymouth-themes/$plymouth_theme)
+if ! test -d (realpath plymouth-themes/$plymouth_theme 2>/dev/null)
     set plymouth_theme mikuboot
 end
 
