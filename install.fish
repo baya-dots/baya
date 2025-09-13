@@ -81,7 +81,7 @@ set -q XDG_CONFIG_HOME && set -l config $XDG_CONFIG_HOME || set -l config $HOME/
 set -q XDG_STATE_HOME && set -l state $XDG_STATE_HOME || set -l state $HOME/.local/state
 
 # Checks
-if ! test -d (realpath plymouth-themes/$plymouth_theme ^/dev/null)
+if ! test -d (realpath plymouth-themes/$plymouth_theme)
     set plymouth_theme mikuboot
 end
 
@@ -138,7 +138,7 @@ if ! pacman -Q $aur_helper &> /dev/null
     cd /tmp
     git clone https://aur.archlinux.org/$aur_helper.git
     cd $aur_helper
-    makepkg -si
+    makepkg -si 
     cd ..
     rm -rf $aur_helper
 
@@ -150,9 +150,6 @@ end
 # Install metapackage for deps
 log 'Installing metapackage...'
 $aur_helper -S --needed baya-meta $noconfirm
-
-# Cd into dir
-cd (dirname (status filename)) || exit 1
 
 # Install hypr* configs
 if confirm-overwrite $config/hypr
@@ -178,36 +175,44 @@ end
 
 # Update mkinitcpio hooks for plymouth
 set mkinit_file /etc/mkinitcpio.conf
+
 if test -f $mkinit_file
-    set hooks (grep -E '^\s*HOOKS=' $mkinit_file)
-
-    if test -n "$hooks"
-        if not contains 'plymouth' $hooks
-            log 'Adding plymouth hook to mkinitcpio...'
-            set new_hooks (string replace -r 'HOOKS=\((.*)filesystems(.*)\)' 'HOOKS=(\1plymouth filesystems\2)' $hooks)
-            sudo sed -i "s|$hooks|$new_hooks|" $mkinit_file
-
-            # Regenerate initramfs
-            sudo mkinitcpio -P
-        else
-            log 'Plymouth hook already in mkinitcpio.conf. Skipping...'
-        end
+    # check if HOOKS line already contains plymouth
+    if grep -qE '^\s*HOOKS=.*\bplymouth\b' $mkinit_file
+        log 'Plymouth hook already in mkinitcpio.conf. Skipping...'
     else
-        log 'HOOKS line not found in mkinitcpio.conf. Skipping...'
+        log 'Adding plymouth hook to mkinitcpio...'
+
+        # backup
+        sudo cp $mkinit_file $mkinit_file.bak
+
+        # Insert "plymouth " immediately before the first "filesystems" in the HOOKS line
+        sudo sed -i -E "s/^(HOOKS=.*)filesystems/\1plymouth filesystems/" $mkinit_file
     end
+
+    # create/overwrite plymouth conf (expand $plymouth_theme from fish)
+    sudo sh -c "cat > /etc/plymouth/plymouth.conf <<EOF
+[Daemon]
+Theme=$plymouth_theme
+ShowDelay=0
+DeviceTimeout=30
+EOF"
+
+    # regenerate initramfs for all kernels
+    sudo mkinitcpio -P
+else
+    log 'mkinitcpio.conf not found. Skipping...'
 end
 
 # Ensure splash is in kernel parameters (idempotent)
-set loader_file /boot/loader/entries/arch.conf
+for entry in /boot/loader/entries/*.conf
+    if test -f $entry
+        set options_line (grep '^options' $entry)
+        if not string match -q '*splash*' $options_line
+            log "Ensuring splash in $entry..."
 
-if test -f $loader_file
-    log 'Ensuring splash is in kernel parameters...'
-    set options_line (grep '^options' $loader_file)
-    if not string match -q '*splash*' $options_line
-        log 'Adding splash to kernel parameters...'
-        sudo sed -i "s|^\(options.*\)|\1 splash|" $loader_file
-    else
-        log 'Splash already present in kernel parameters. Skipping...'
+            sudo sed -i "s|^\(options.*\)|\1 splash|" $entry
+        end
     end
 end
 
