@@ -183,9 +183,6 @@ if test -f $mkinit_file
     else
         log 'Adding plymouth hook to mkinitcpio...'
 
-        # backup
-        sudo cp $mkinit_file $mkinit_file.bak
-
         # Insert "plymouth " immediately before the first "filesystems" in the HOOKS line
         sudo sed -i -E "s/^(HOOKS=.*)filesystems/\1plymouth filesystems/" $mkinit_file
     end
