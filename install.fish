@@ -5,6 +5,7 @@ argparse -n 'install.fish' -X 0 \
     'noconfirm' \
     'paru' \
     'plymouth=' \
+    'zen' \
     -- $argv
 or exit
 
@@ -16,8 +17,9 @@ if set -q _flag_h
     echo '  -h, --help                  show this help message and exit'
     echo '  --noconfirm                 do not confirm package installation'
     echo '  --paru                      uses the aur helper paru instead of default yay'
-    echo '  --plymouth=mikuboot       uses the specified plymouth theme (default: mikuboot)'
-
+    echo '  --plymouth=mikuboot         uses the specified plymouth theme (default: mikuboot)'
+    echo '  --zen                       install Zen browser'
+    
     exit
 end
 
@@ -151,6 +153,10 @@ end
 log 'Installing metapackage...'
 $aur_helper -S --needed baya-meta $noconfirm
 
+# cd into directory
+cd (dirname (status filename)) || exit 1
+
+## INSTALLATIONS
 # Install hypr* configs
 if confirm-overwrite $config/hypr
     log 'Installing hypr* configs...'
@@ -158,6 +164,13 @@ if confirm-overwrite $config/hypr
     hyprctl reload
 end
 
+# Install zen
+if set -q _flag_zen
+    log 'Installing zen...'
+    $aur_helper -S --needed zen-browser-bin $noconfirm
+end
+
+## PLYMOUTH
 # Plymouth theme
 set plymouth_theme_src (realpath plymouth-themes)
 set target_path /usr/share/plymouth/themes/$plymouth_theme
@@ -167,7 +180,7 @@ if confirm-overwrite $target_path true
     sudo mkdir -p $target_path
     sudo cp -r $plymouth_theme_src/$plymouth_theme/* $target_path/
 end
-
+B739-77CA
 # Update mkinitcpio hooks for plymouth
 set mkinit_file /etc/mkinitcpio.conf
 set plymouth_conf /etc/plymouth/plymouth.conf
