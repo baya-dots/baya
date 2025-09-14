@@ -158,23 +158,20 @@ if confirm-overwrite $config/hypr
     hyprctl reload
 end
 
-# Plymouth themes
+# Plymouth theme
 set plymouth_theme_src (realpath plymouth-themes)
-if test -d $plymouth_theme_src
-    for theme_dir in $plymouth_theme_src/*/
-        set theme_name (basename $theme_dir)
-        set target_path /usr/share/plymouth/themes/$theme_name
+set target_path /usr/share/plymouth/themes/$plymouth_theme
 
-        if confirm-overwrite $target_path true
-            log "Copying Plymouth theme - $theme_name..."
-            sudo mkdir -p $target_path
-            sudo cp -r $plymouth_theme_src/$theme_name/* $target_path/
-        end
-    end
+if confirm-overwrite $target_path true
+    log "Copying Plymouth theme - $plymouth_theme..."
+    sudo mkdir -p $target_path
+    sudo cp -r $plymouth_theme_src/$plymouth_theme/* $target_path/
 end
 
 # Update mkinitcpio hooks for plymouth
 set mkinit_file /etc/mkinitcpio.conf
+set plymouth_conf /etc/plymouth/plymouth.conf
+set shall_update 0
 
 if test -f $mkinit_file
     # check if HOOKS line already contains plymouth
@@ -182,21 +179,35 @@ if test -f $mkinit_file
         log 'Plymouth hook already in mkinitcpio.conf. Skipping...'
     else
         log 'Adding plymouth hook to mkinitcpio...'
-
-        # Insert "plymouth " immediately before the first "filesystems" in the HOOKS line
         sudo sed -i -E "s/^(HOOKS=.*)filesystems/\1plymouth filesystems/" $mkinit_file
+        set shall_update 1
     end
 
-    # create/overwrite plymouth conf (expand $plymouth_theme from fish)
-    sudo sh -c "cat > /etc/plymouth/plymouth.conf <<EOF
+    # Check current theme in plymouth.conf
+    if test -f $plymouth_conf
+        set current_theme (grep '^Theme=' $plymouth_conf | cut -d'=' -f2)
+    else
+        set current_theme ""
+    end
+
+    if test "$current_theme" != "$plymouth_theme"
+        log "Updating Plymouth config (theme: $plymouth_theme)..."
+        sudo sh -c "cat > $plymouth_conf <<EOF
 [Daemon]
 Theme=$plymouth_theme
 ShowDelay=0
 DeviceTimeout=30
 EOF"
+        set shall_update 1
+    else
+        log "Plymouth theme already set to $plymouth_theme. Skipping..."
+    end
 
-    # regenerate initramfs for all kernels
-    sudo mkinitcpio -P
+    # Only regenerate initramfs if something changed
+    if test $shall_update -eq 1
+        log 'Regenerating initramfs for all kernels...'
+        sudo mkinitcpio -P
+    end
 else
     log 'mkinitcpio.conf not found. Skipping...'
 end
