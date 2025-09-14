@@ -180,7 +180,7 @@ if confirm-overwrite $target_path true
     sudo mkdir -p $target_path
     sudo cp -r $plymouth_theme_src/$plymouth_theme/* $target_path/
 end
-B739-77CA
+
 # Update mkinitcpio hooks for plymouth
 set mkinit_file /etc/mkinitcpio.conf
 set plymouth_conf /etc/plymouth/plymouth.conf
